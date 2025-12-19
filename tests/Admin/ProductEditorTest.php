@@ -1,6 +1,6 @@
 <?php
 
-namespace Netivo\Module\WooCommerce\Present\Tests;
+namespace Netivo\Module\WooCommerce\Present\Tests\Admin;
 
 use Brain\Monkey;
 use Netivo\Module\WooCommerce\Present\Admin\ProductEditor;
