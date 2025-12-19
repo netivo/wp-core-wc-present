@@ -1,0 +1,46 @@
+{
+  "name": "netivo/wc-present",
+  "description": "Netivo Module for Woocommerce option packing for present.",
+  "minimum-stability": "stable",
+  "license": "proprietary",
+  "version": "1.0",
+  "authors": [
+    {
+      "name": "netivo",
+      "email": "biuro@netivo.pl"
+    },
+    {
+      "name": "Michał Świątek",
+      "email": "michal.swiatek@netivo.pl"
+    }
+  ],
+  "repositories": [
+    {
+      "type": "vcs",
+      "url": "git@github.com:netivo/wp-core.git"
+    }
+  ],
+  "require": {
+    "php": ">=8.2",
+    "netivo/wp-core": "^1.1"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^10.5 || ^11.0",
+    "brain/monkey": "^2.6"
+  },
+  "autoload": {
+    "psr-4": {
+      "Netivo\\Module\\WooCommerce\\Present\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Netivo\\Module\\WooCommerce\\Present\\Tests\\": "tests/"
+    }
+  },
+  "scripts": {
+    "test": [
+      "@php -d zend.enable_gc=0 vendor/bin/phpunit"
+    ]
+  }
+}
