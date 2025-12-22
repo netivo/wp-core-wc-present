@@ -11,6 +11,7 @@ namespace Netivo\Module\WooCommerce\Present;
 
 use Netivo\Module\WooCommerce\Present\Admin\Admin;
 use Netivo\Module\WooCommerce\Present\Product\ProductManager;
+use Netivo\Module\WooCommerce\Present\Frontend\Checkout;
 
 if ( ! defined( 'ABSPATH' ) ) {
 	header( 'HTTP/1.0 403 Forbidden' );
@@ -22,6 +23,7 @@ class Module {
 
 	public function __construct() {
 		new ProductManager();
+		new Checkout();
 
 		if ( is_admin() ) {
 			new Admin();
