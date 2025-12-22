@@ -18,37 +18,21 @@ class ProductEditorTest extends TestCase {
 		parent::tearDown();
 	}
 
-	public function test_constructor_adds_actions() {
+	public function test_constructor_adds_hooks() {
 		new ProductEditor();
 
-		$this->assertTrue( has_action( 'woocommerce_product_options_type' ) !== false );
+		$this->assertTrue( has_filter( 'product_type_options' ) !== false );
 		$this->assertTrue( has_action( 'woocommerce_process_product_meta' ) !== false );
 	}
 
-	public function test_add_present_packing_checkbox() {
-		$editor = new ProductEditor();
+	public function test_add_product_type_options() {
+		$editor  = new ProductEditor();
+		$options = [ 'virtual' => [] ];
+		$result  = $editor->add_product_type_options( $options );
 
-		global $post;
-		$post = (object) [ 'ID' => 123 ];
-
-		Monkey\Functions\expect( 'get_post_meta' )
-			->with( 123, ProductEditor::META_KEY, true )
-			->andReturn( 'yes' );
-
-		Monkey\Functions\expect( 'woocommerce_wp_checkbox' )
-			->once()
-			->with( \Mockery::on( function ( $args ) {
-				return $args['id'] === ProductEditor::META_KEY && $args['value'] === 'yes';
-			} ) );
-
-		ob_start();
-		try {
-			$editor->add_present_packing_checkbox();
-		} finally {
-			$output = ob_get_clean();
-		}
-
-		$this->assertStringNotContainsString( 'options_group', $output );
+		$this->assertArrayHasKey( 'present_packing_enabled', $result );
+		$this->assertEquals( ProductEditor::META_KEY, $result['present_packing_enabled']['id'] );
+		$this->assertEquals( 'Możliwość pakowania na prezent', $result['present_packing_enabled']['label'] );
 	}
 
 	public function test_save_present_packing_checkbox() {

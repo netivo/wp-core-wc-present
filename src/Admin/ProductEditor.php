@@ -18,22 +18,27 @@ class ProductEditor {
 	const META_KEY = '_present_packing_enabled';
 
 	public function __construct() {
-		add_action( 'woocommerce_product_options_type', [ $this, 'add_present_packing_checkbox' ] );
+		add_filter( 'product_type_options', [ $this, 'add_product_type_options' ] );
 		add_action( 'woocommerce_process_product_meta', [ $this, 'save_present_packing_checkbox' ] );
 	}
 
 	/**
-	 * Add checkbox to product general options.
+	 * Add option to product type options (next to Virtual/Downloadable).
+	 *
+	 * @param array $options
+	 *
+	 * @return array
 	 */
-	public function add_present_packing_checkbox() {
-		global $post;
+	public function add_product_type_options( $options ) {
+		$options['present_packing_enabled'] = [
+			'id'            => self::META_KEY,
+			'wrapper_class' => 'show_if_simple show_if_variable',
+			'label'         => __( 'Możliwość pakowania na prezent', 'netivo' ),
+			'description'   => __( 'Zaznacz, jeśli produkt może być zapakowany na prezent.', 'netivo' ),
+			'default'       => 'no',
+		];
 
-		woocommerce_wp_checkbox( [
-			'id'          => self::META_KEY,
-			'label'       => __( 'Możliwość pakowania na prezent', 'netivo' ),
-			'description' => __( 'Zaznacz, jeśli produkt może być zapakowany na prezent.', 'netivo' ),
-			'value'       => get_post_meta( $post->ID, self::META_KEY, true ),
-		] );
+		return $options;
 	}
 
 	/**
