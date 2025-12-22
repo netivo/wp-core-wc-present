@@ -21,11 +21,11 @@ class AdminTest extends TestCase {
 	public function test_constructor_initializes_settings_and_product_editor() {
 		// Admin constructor initializes Settings and ProductEditor.
 		// Settings adds 'woocommerce_get_sections_products' filter.
-		// ProductEditor adds 'woocommerce_product_options_general_product_data' action.
+		// ProductEditor adds 'woocommerce_product_options_type' action.
 
 		new Admin();
 
 		$this->assertTrue( has_filter( 'woocommerce_get_sections_products' ) !== false );
-		$this->assertTrue( has_action( 'woocommerce_product_options_general_product_data' ) !== false );
+		$this->assertTrue( has_action( 'woocommerce_product_options_type' ) !== false );
 	}
 }

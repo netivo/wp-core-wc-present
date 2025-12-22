@@ -21,7 +21,7 @@ class ProductEditorTest extends TestCase {
 	public function test_constructor_adds_actions() {
 		new ProductEditor();
 
-		$this->assertTrue( has_action( 'woocommerce_product_options_general_product_data' ) !== false );
+		$this->assertTrue( has_action( 'woocommerce_product_options_type' ) !== false );
 		$this->assertTrue( has_action( 'woocommerce_process_product_meta' ) !== false );
 	}
 
@@ -48,7 +48,7 @@ class ProductEditorTest extends TestCase {
 			$output = ob_get_clean();
 		}
 
-		$this->assertStringContainsString( 'options_group', $output );
+		$this->assertStringNotContainsString( 'options_group', $output );
 	}
 
 	public function test_save_present_packing_checkbox() {
