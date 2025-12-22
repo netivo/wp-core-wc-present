@@ -24,7 +24,7 @@ class Checkout {
 		add_action( 'woocommerce_review_order_before_shipping', [ $this, 'display_present_packing_checkbox' ] );
 		add_action( 'woocommerce_checkout_update_order_review', [ $this, 'update_session_on_checkout' ] );
 		add_action( 'woocommerce_cart_calculate_fees', [ $this, 'add_present_packing_fee' ] );
-		add_action( 'woocommerce_checkout_create_order', [ $this, 'add_present_product_to_order' ], 10, 2 );
+		add_action( 'woocommerce_checkout_order_processed', [ $this, 'add_present_product_to_order' ], 10, 3 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_scripts' ] );
 	}
 
@@ -166,10 +166,19 @@ class Checkout {
 	/**
 	 * Add the present product to the order after it is created.
 	 *
+	 * @param int $order_id
+	 * @param array $posted_data
 	 * @param \WC_Order $order
-	 * @param array $data
 	 */
-	public function add_present_product_to_order( $order, $data ) {
+	public function add_present_product_to_order( $order_id, $posted_data, $order ) {
+		if ( ! $order instanceof \WC_Order ) {
+			$order = wc_get_order( $order_id );
+		}
+
+		if ( ! $order ) {
+			return;
+		}
+
 		$is_checked = false;
 		if ( isset( WC()->session ) ) {
 			$is_checked = WC()->session->get( self::CHECKBOX_ID );
@@ -190,14 +199,12 @@ class Checkout {
 		}
 
 		$price = $this->calculate_price( WC()->cart );
+		$name  = get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) );
 
 		// Remove existing fees with the same name if any (to avoid double charging if it was added as fee)
-		// Actually, the user wants the price in the summary, so it's a fee during checkout.
-		// If we add the product to the order, we should probably remove the fee from the order object if it's there.
 		foreach ( $order->get_fees() as $fee_id => $fee ) {
-			if ( $fee->get_name() === get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) ) ) {
+			if ( $fee->get_name() === $name ) {
 				$order->remove_item( $fee_id );
-				break;
 			}
 		}
 

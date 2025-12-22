@@ -35,7 +35,7 @@ class CheckoutTest extends TestCase {
 		$this->assertTrue( has_action( 'woocommerce_review_order_before_shipping' ) !== false );
 		$this->assertTrue( has_action( 'woocommerce_checkout_update_order_review' ) !== false );
 		$this->assertTrue( has_action( 'woocommerce_cart_calculate_fees' ) !== false );
-		$this->assertTrue( has_action( 'woocommerce_checkout_create_order' ) !== false );
+		$this->assertTrue( has_action( 'woocommerce_checkout_order_processed' ) !== false );
 		$this->assertTrue( has_action( 'wp_enqueue_scripts' ) !== false );
 	}
 
@@ -98,9 +98,10 @@ class CheckoutTest extends TestCase {
 		$this->assertTrue( true );
 	}
 
-	public function test_add_present_product_to_order() {
+	public function test_add_present_product_to_order_removes_fee() {
 		$checkout = new Checkout();
 		$order    = \Mockery::mock( 'WC_Order' );
+		$order_id = 123;
 		$data     = [];
 
 		Monkey\Functions\when( 'is_admin' )->justReturn( false );
@@ -133,13 +134,19 @@ class CheckoutTest extends TestCase {
 		$product = \Mockery::mock( 'WC_Product' );
 		Monkey\Functions\when( 'wc_get_product' )->justReturn( $product );
 
-		// Mock order methods
-		$order->shouldReceive( 'get_fees' )->andReturn( [] );
+		// Mock fee
+		$fee = \Mockery::mock( 'WC_Order_Item_Fee' );
+		$fee->shouldReceive( 'get_name' )->andReturn( 'Pakowanie na prezent' );
+		$order->shouldReceive( 'get_fees' )->andReturn( [ 456 => $fee ] );
+
+		// Expect fee removal
+		$order->shouldReceive( 'remove_item' )->with( 456 )->once();
+
 		$order->shouldReceive( 'add_item' )->once();
 		$order->shouldReceive( 'calculate_totals' )->once();
 		$order->shouldReceive( 'save' )->once();
 
-		$checkout->add_present_product_to_order( $order, $data );
+		$checkout->add_present_product_to_order( $order_id, $data, $order );
 		$this->assertTrue( true );
 	}
 }
