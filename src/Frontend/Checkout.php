@@ -22,8 +22,39 @@ class Checkout {
 
 	public function __construct() {
 		add_action( 'woocommerce_review_order_before_shipping', [ $this, 'display_present_packing_checkbox' ] );
+		add_action( 'woocommerce_checkout_update_order_review', [ $this, 'update_session_on_checkout' ] );
 		add_action( 'woocommerce_cart_calculate_fees', [ $this, 'add_present_packing_fee' ] );
+		add_action( 'woocommerce_checkout_create_order', [ $this, 'add_present_product_to_order' ], 10, 2 );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_scripts' ] );
+	}
+
+	/**
+	 * Update session with checkbox value during checkout update.
+	 *
+	 * @param string $post_data
+	 */
+	public function update_session_on_checkout( $post_data ) {
+		parse_str( $post_data, $data );
+		$is_checked = isset( $data[ self::CHECKBOX_ID ] );
+		WC()->session->set( self::CHECKBOX_ID, $is_checked );
+	}
+
+	/**
+	 * Calculate the price for present packing.
+	 *
+	 * @param \WC_Cart $cart
+	 *
+	 * @return float
+	 */
+	private function calculate_price( $cart ) {
+		$price_type = get_option( 'present_packing_price_type', 'fixed' );
+		$price_val  = (float) get_option( 'present_packing_price_value', 0 );
+
+		if ( 'percentage' === $price_type ) {
+			return $cart->get_subtotal() * ( $price_val / 100 );
+		}
+
+		return $price_val;
 	}
 
 	/**
@@ -71,11 +102,19 @@ class Checkout {
 			return;
 		}
 
-		$checked    = isset( $_POST['post_data'] ) ? parse_str( $_POST['post_data'], $post_data ) : [];
-		$is_checked = isset( $post_data[ self::CHECKBOX_ID ] );
-
-		if ( ! isset( $post_data ) && isset( WC()->session ) ) {
+		$is_checked = false;
+		if ( isset( $_POST['post_data'] ) ) {
+			parse_str( $_POST['post_data'], $post_data );
+			$is_checked = isset( $post_data[ self::CHECKBOX_ID ] );
+		} elseif ( isset( WC()->session ) ) {
 			$is_checked = WC()->session->get( self::CHECKBOX_ID );
+		}
+
+		$price = $this->calculate_price( WC()->cart );
+		$label = get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) );
+
+		if ( $price > 0 ) {
+			$label .= ' (' . wc_price( $price ) . ')';
 		}
 
 		echo '<tr class="present-packing-checkbox">
@@ -84,7 +123,7 @@ class Checkout {
 		woocommerce_form_field( self::CHECKBOX_ID, [
 			'type'    => 'checkbox',
 			'class'   => [ 'form-row-wide' ],
-			'label'   => get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) ),
+			'label'   => $label,
 			'default' => $is_checked ? 1 : 0,
 		], $is_checked ? 1 : 0 );
 
@@ -92,7 +131,7 @@ class Checkout {
 	}
 
 	/**
-	 * Add fee if checkbox is checked.
+	 * Add fee to cart if checkbox is checked.
 	 *
 	 * @param \WC_Cart $cart
 	 */
@@ -115,19 +154,61 @@ class Checkout {
 		}
 
 		if ( $is_checked ) {
-			$name       = get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) );
-			$price_type = get_option( 'present_packing_price_type', 'fixed' );
-			$price_val  = (float) get_option( 'present_packing_price_value', 0 );
+			$name  = get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) );
+			$price = $this->calculate_price( $cart );
 
-			if ( 'percentage' === $price_type ) {
-				$fee = $cart->get_subtotal() * ( $price_val / 100 );
-			} else {
-				$fee = $price_val;
-			}
-
-			if ( $fee > 0 ) {
-				$cart->add_fee( $name, $fee );
+			if ( $price > 0 ) {
+				$cart->add_fee( $name, $price );
 			}
 		}
+	}
+
+	/**
+	 * Add the present product to the order after it is created.
+	 *
+	 * @param \WC_Order $order
+	 * @param array $data
+	 */
+	public function add_present_product_to_order( $order, $data ) {
+		$is_checked = false;
+		if ( isset( WC()->session ) ) {
+			$is_checked = WC()->session->get( self::CHECKBOX_ID );
+		}
+
+		if ( ! $is_checked || ! $this->is_present_packing_available() ) {
+			return;
+		}
+
+		$present_product_id = (int) get_option( ProductManager::PRODUCT_ID_OPTION );
+		if ( ! $present_product_id ) {
+			return;
+		}
+
+		$product = wc_get_product( $present_product_id );
+		if ( ! $product ) {
+			return;
+		}
+
+		$price = $this->calculate_price( WC()->cart );
+
+		// Remove existing fees with the same name if any (to avoid double charging if it was added as fee)
+		// Actually, the user wants the price in the summary, so it's a fee during checkout.
+		// If we add the product to the order, we should probably remove the fee from the order object if it's there.
+		foreach ( $order->get_fees() as $fee_id => $fee ) {
+			if ( $fee->get_name() === get_option( 'present_packing_name', __( 'Pakowanie na prezent', 'netivo' ) ) ) {
+				$order->remove_item( $fee_id );
+				break;
+			}
+		}
+
+		$item = new \WC_Order_Item_Product();
+		$item->set_product( $product );
+		$item->set_quantity( 1 );
+		$item->set_subtotal( $price );
+		$item->set_total( $price );
+
+		$order->add_item( $item );
+		$order->calculate_totals();
+		$order->save();
 	}
 }
