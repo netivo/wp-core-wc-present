@@ -50,6 +50,8 @@ class Checkout {
 		$price_type = get_option( 'present_packing_price_type', 'fixed' );
 		$price_val  = (float) get_option( 'present_packing_price_value', 0 );
 
+		$price_val = apply_filters( 'netivo/present/price', $price_val, $price_type );
+
 		if ( 'percentage' === $price_type ) {
 			return $cart->get_subtotal() * ( $price_val / 100 );
 		}
